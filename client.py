@@ -1,15 +1,32 @@
 #!/usr/bin/env python
 
-from time import sleep
+import os
 import sys
-from mfrc522 import SimpleMFRC522
+import time
+import mfrc522
+import requests
+import RPi.GPIO as GPIO
 
-reader = SimpleMFRC522()
+# Load the config file
+with open('/boot/innexgo-client.json') as configfile:
+    config = json.load(configfile)
 
-try:
-    while True:
-        id, text = reader.read()
-        print(id)
-except KeyboardInterrupt:
-    GPIO.cleanup()
-    raise
+    apiKey = config['apiKey']
+    hostname = config['hostname']
+    locationId = config['locationId']
+
+
+    # now we can get scanning
+    reader = mfrc522.MFRC522()
+
+    try:
+        while True:
+            (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
+            if detectstatus == reader.MI_OK:
+                (uidstatus, uid) = reader.MFRC522_Anticoll()
+                if uidstatus == reader.MI_OK:
+                    print(uid[0], uid[1], uid[2], uid[3])
+
+                time.sleep(1)
+    except KeyboardInterrupt:
+        GPIO.cleanup()
