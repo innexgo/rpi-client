@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import json
 import mfrc522
 import requests
 import RPi.GPIO as GPIO
@@ -11,9 +12,9 @@ import RPi.GPIO as GPIO
 with open('/boot/innexgo-client.json') as configfile:
     config = json.load(configfile)
 
-    apiKey = config['apiKey']
-    hostname = config['hostname']
-    locationId = config['locationId']
+    #apiKey = config['apiKey']
+    #hostname = config['hostname']
+    #locationId = config['locationId']
 
 
     # now we can get scanning
@@ -27,6 +28,6 @@ with open('/boot/innexgo-client.json') as configfile:
                 if uidstatus == reader.MI_OK:
                     print(uid[0], uid[1], uid[2], uid[3])
 
-                time.sleep(1)
+                time.sleep(0.01)
     except KeyboardInterrupt:
         GPIO.cleanup()
