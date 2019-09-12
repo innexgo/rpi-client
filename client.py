@@ -75,7 +75,7 @@ def updateInfoInfrequent():
 
     millis = currentMillis()
     courses = requests.get(
-            f'{protocol}://{hostname}/course/'
+            f'{protocol}://{hostname}/course/'+
             f'?locationId={locationId}&apiKey={apiKey}'
                     ).json()
 
@@ -117,14 +117,14 @@ with open('innexgo-client.json') as configfile:
                     if currentCourse is None:
                         # There's not a class at the moment
                         noSessionRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/'
+                            f'{protocol}://{hostname}/encounter/'+
                             f'?locationId={locationId}&cardId={cardId}&apiKey={apiKey}'
                         )
                     else:
                         # There is a class at the moment
                         courseId = currentCourse['id']
                         sessionEncounterRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/'
+                            f'{protocol}://{hostname}/encounter/'+
                             f'?locationId={locationId}&courseId={courseId}&cardId={cardId}&apiKey={apiKey}'
                         )
                 time.sleep(0.5)
