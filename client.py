@@ -57,7 +57,6 @@ def updateInfo():
         currentCourse = None
 
     if (courses is not None) and (currentPeriod is not None):
-        print('yeet course')
         # get course with current location and period
         currentCourse = next(
             filter(
@@ -110,8 +109,8 @@ with open('innexgo-client.json') as configfile:
             (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
             if detectstatus == reader.MI_OK:
                 (uidstatus, uid) = reader.MFRC522_Anticoll()
-		# Convert uid to int
-		cardId = int(bytes(uid).hex(), 16)
+                # Convert uid to int
+                cardId = int(bytes(uid).hex(), 16)
 
                 # TODO add dings
                 if uidstatus == reader.MI_OK:
@@ -120,14 +119,15 @@ with open('innexgo-client.json') as configfile:
                         noSessionRequest = requests.get(
                             f'{protocol}://{hostname}/encounter/'
                             f'?locationId={locationId}&cardId={cardId}'
-			    f'&apiKey={apiKey}'
+                            f'&apiKey={apiKey}'
                         )
                     else:
                         # There is a class at the moment
                         courseId = currentCourse['id']
                         sessionEncounterRequest = requests.get(
                             f'{protocol}://{hostname}/encounter/'
-                            f'?locationId={locationId}&courseId={courseId}&cardId={cardId}&apiKey={apiKey}'
+                            f'?locationId={locationId}&courseId={courseId}&cardId={cardId}'
+                            f'&apiKey={apiKey}'
                         )
                 time.sleep(0.5)
     except KeyboardInterrupt:
