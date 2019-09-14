@@ -7,7 +7,6 @@ import json
 import mfrc522
 import datetime
 import requests
-import binascii
 import threading
 import RPi.GPIO
 
@@ -77,7 +76,7 @@ def updateInfoInfrequent():
 
     millis = currentMillis()
     courses = requests.get(
-            f'{protocol}://{hostname}/course/'+
+            f'{protocol}://{hostname}/course/'
             f'?locationId={locationId}&apiKey={apiKey}'
                     ).json()
 
@@ -111,16 +110,17 @@ with open('innexgo-client.json') as configfile:
             (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
             if detectstatus == reader.MI_OK:
                 (uidstatus, uid) = reader.MFRC522_Anticoll()
+		# Convert uid to int
+		cardId = int(bytes(uid).hex(), 16)
 
                 # TODO add dings
                 if uidstatus == reader.MI_OK:
-                    cardId = '0x' + binascii.hexlify(bytearray(uid))
-
                     if currentCourse is None:
                         # There's not a class at the moment
                         noSessionRequest = requests.get(
                             f'{protocol}://{hostname}/encounter/'
-                            f'?locationId={locationId}&cardId={cardId}&apiKey={apiKey}'
+                            f'?locationId={locationId}&cardId={cardId}'
+			    f'&apiKey={apiKey}'
                         )
                     else:
                         # There is a class at the moment
