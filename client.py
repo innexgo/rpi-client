@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -52,11 +52,13 @@ def updateInfo():
             ),
             None
         )
+        print(currentCourse)
     else:
         print('period is none')
         currentCourse = None
 
     if (courses is not None) and (currentPeriod is not None):
+        print('yeet course')
         # get course with current location and period
         currentCourse = next(
             filter(
@@ -117,16 +119,16 @@ with open('innexgo-client.json') as configfile:
                     if currentCourse is None:
                         # There's not a class at the moment
                         noSessionRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/'+
+                            f'{protocol}://{hostname}/encounter/'
                             f'?locationId={locationId}&cardId={cardId}&apiKey={apiKey}'
                         )
                     else:
                         # There is a class at the moment
                         courseId = currentCourse['id']
                         sessionEncounterRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/'+
+                            f'{protocol}://{hostname}/encounter/'
                             f'?locationId={locationId}&courseId={courseId}&cardId={cardId}&apiKey={apiKey}'
                         )
                 time.sleep(0.5)
     except KeyboardInterrupt:
-        Rpi.GPIO.cleanup()
+        RPi.GPIO.cleanup()
