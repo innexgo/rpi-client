@@ -7,8 +7,15 @@ import json
 import datetime
 import requests
 import threading
-import RPi.GPIO
-import mfrc522
+
+def isPi():
+    return sys.implementation._multiarch is 'arm-linux-gnueabihf'
+
+# if raspberry pi
+if isPi():
+    import RPi.GPIO
+    import mfrc522
+
 
 courses = None
 periods = None
@@ -73,25 +80,54 @@ def updateInfoInfrequent():
     global courses
 
     millis = currentMillis()
-    courseRequest = requests.get(
-            f'{protocol}://{hostname}/course/'
-            f'?locationId={locationId}&apiKey={apiKey}'
-                    )
+    courseRequest = requests.get(f'{protocol}://{hostname}/course/',
+                                 params={
+                                     'locationId':locationId,
+                                     'apiKey':apiKey})
     if courseRequest.ok:
         courses = courseRequest.json()
     else:
         print('request to server for courses failed')
         courses = []
 
-    periodsRequest = requests.get(
-            f'{protocol}://{hostname}/period/?apiKey={apiKey}'
-                    )
+    periodsRequest = requests.get(f'{protocol}://{hostname}/period/',
+                                  params={'apiKey':apiKey})
     if periodsRequest.ok:
         periods = sorted(periodsRequest.json(), key = lambda i: i['initialTime'])
     else:
         print('request to server for periods failed')
         periods = []
     updateInfo()
+
+def sendEncounterWithCard(cardId):
+    if currentCourse is None:
+        # There's not a class at the moment
+        newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
+                                        params={'apiKey':apiKey,
+                                                'locationId':locationId,
+                                                'cardId':cardId})
+        print(newEncounterRequest.content)
+        if newEncounterRequest.ok:
+            encounter = newEncounterRequest.json()
+            print('logged encounter')
+            print(encounter)
+        else:
+            print('request was unsuccessful')
+    else:
+        # There is a class at the moment
+        courseId = currentCourse['id']
+        newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
+                                        params={'apiKey':apiKey,
+                                                'locationId':locationId,
+                                                'courseId':courseId,
+                                                'cardId':cardId})
+        print(newEncounterRequest.content)
+        if newEncounterRequest.ok:
+            encounter = newEncounterRequest.json()
+            print(f'logged encounter at class {currentCourse["subject"]}')
+            print(encounter)
+        else:
+            print('request was unsuccessful')
 
 # Load the config file
 with open('innexgo-client.json') as configfile:
@@ -109,45 +145,20 @@ with open('innexgo-client.json') as configfile:
     setInterval(updateInfoInfrequent, 1);
 
 
-    # now we can get scanning
-    reader = mfrc522.MFRC522()
+    if isPi():
+        try:
+            reader = mfrc522.MFRC522()
+            while True:
+                (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
+                if detectstatus == reader.MI_OK:
+                    (uidstatus, uid) = reader.MFRC522_Anticoll()
 
-    try:
-        while True:
-            (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
-            if detectstatus == reader.MI_OK:
-                (uidstatus, uid) = reader.MFRC522_Anticoll()
-
-                # TODO add dings
-                if uidstatus == reader.MI_OK:
-                    # Convert uid to int
-                    cardId = int(bytes(uid).hex(), 16)
-                    print(f'logged {cardId}')
-                    if currentCourse is None:
-                        # There's not a class at the moment
-                        noSessionRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/new/'
-                            f'?locationId={locationId}&cardId={cardId}'
-                            f'&apiKey={apiKey}'
-                        )
-                        if noSessionRequest.ok:
-                            encounter = noSessionRequest.json()
-                            print(encounter)
-                        else:
-                            print('request was unsuccessful')
-                    else:
-                        # There is a class at the moment
-                        courseId = currentCourse['id']
-                        sessionEncounterRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/new/'
-                            f'?locationId={locationId}&courseId={courseId}&cardId={cardId}'
-                            f'&apiKey={apiKey}'
-                        )
-                        if sessionEncounterRequest.ok:
-                            encounter = sessionEncounterRequest.json()
-                            print(encounter)
-                        else:
-                            print('request was unsuccessful')
-                time.sleep(0.5)
-    except KeyboardInterrupt:
-        RPi.GPIO.cleanup()
+                    # TODO add dings
+                    if uidstatus == reader.MI_OK:
+                        # Convert uid to int
+                        cardId = int(bytes(uid).hex(), 16)
+                        print(f'logged {cardId}')
+                        sendEncounterWithCard(cardId)
+                    time.sleep(0.5)
+        except KeyboardInterrupt:
+            RPi.GPIO.cleanup()
