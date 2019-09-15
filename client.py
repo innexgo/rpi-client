@@ -9,7 +9,7 @@ import requests
 import threading
 
 def isPi():
-    return sys.implementation._multiarch is 'arm-linux-gnueabihf'
+    return sys.implementation._multiarch == 'arm-linux-gnueabihf'
 
 # if raspberry pi
 if isPi():
@@ -31,6 +31,9 @@ currentCourse = None
 def currentMillis():
     return round(1000 * time.time())
 
+def printMillis(millis):
+    print(datetime.datetime.fromtimestamp(millis/1000.0))
+
 # setInterval for python
 def setInterval(func, sec):
     def func_wrapper():
@@ -40,8 +43,6 @@ def setInterval(func, sec):
     t.start()
     return t
 
-def printMillis(millis):
-    print(datetime.datetime.fromtimestamp(millis/1000.0))
 
 def updateInfo():
     global currentCourse
@@ -79,55 +80,63 @@ def updateInfoInfrequent():
     global periods
     global courses
 
-    millis = currentMillis()
-    courseRequest = requests.get(f'{protocol}://{hostname}/course/',
-                                 params={
-                                     'locationId':locationId,
-                                     'apiKey':apiKey})
-    if courseRequest.ok:
-        courses = courseRequest.json()
-    else:
-        print('request to server for courses failed')
-        courses = []
+    try:
+        millis = currentMillis()
+        courseRequest = requests.get(f'{protocol}://{hostname}/course/',
+                                     params={
+                                         'locationId':locationId,
+                                         'apiKey':apiKey})
+        if courseRequest.ok:
+            courses = courseRequest.json()
+        else:
+            print('request to server for courses failed')
+            courses = []
 
-    periodsRequest = requests.get(f'{protocol}://{hostname}/period/',
-                                  params={'apiKey':apiKey})
-    if periodsRequest.ok:
-        periods = sorted(periodsRequest.json(), key = lambda i: i['initialTime'])
-    else:
-        print('request to server for periods failed')
+        periodsRequest = requests.get(f'{protocol}://{hostname}/period/',
+                                      params={'apiKey':apiKey})
+        if periodsRequest.ok:
+            periods = sorted(periodsRequest.json(), key = lambda i: i['initialTime'])
+        else:
+            print('request to server for periods failed')
+            periods = []
+    except requests.exceptions.RequestException:
+        print(f'fetching data failed, could not connect to {protocol}://{hostname}')
+        courses = []
         periods = []
     updateInfo()
 
 def sendEncounterWithCard(cardId):
-    if currentCourse is None:
-        # There's not a class at the moment
-        newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
-                                        params={'apiKey':apiKey,
-                                                'locationId':locationId,
-                                                'cardId':cardId})
-        print(newEncounterRequest.content)
-        if newEncounterRequest.ok:
-            encounter = newEncounterRequest.json()
-            print('logged encounter')
-            print(encounter)
+    try:
+        if currentCourse is None:
+            # There's not a class at the moment
+            newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
+                                            params={'apiKey':apiKey,
+                                                    'locationId':locationId,
+                                                    'cardId':cardId})
+            print(newEncounterRequest.content)
+            if newEncounterRequest.ok:
+                encounter = newEncounterRequest.json()
+                print('logged encounter')
+                print(encounter)
+            else:
+                print('request was unsuccessful')
         else:
-            print('request was unsuccessful')
-    else:
-        # There is a class at the moment
-        courseId = currentCourse['id']
-        newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
-                                        params={'apiKey':apiKey,
-                                                'locationId':locationId,
-                                                'courseId':courseId,
-                                                'cardId':cardId})
-        print(newEncounterRequest.content)
-        if newEncounterRequest.ok:
-            encounter = newEncounterRequest.json()
-            print(f'logged encounter at class {currentCourse["subject"]}')
-            print(encounter)
-        else:
-            print('request was unsuccessful')
+            # There is a class at the moment
+            courseId = currentCourse['id']
+            newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
+                                            params={'apiKey':apiKey,
+                                                    'locationId':locationId,
+                                                    'courseId':courseId,
+                                                    'cardId':cardId})
+            print(newEncounterRequest.content)
+            if newEncounterRequest.ok:
+                encounter = newEncounterRequest.json()
+                print(f'logged encounter at class {currentCourse["subject"]}')
+                print(encounter)
+            else:
+                print('request was unsuccessful')
+    except requests.exceptions.RequestException:
+        print(f'Sending encounter failed, could not connect to {protocol}://{hostname}')
 
 # Load the config file
 with open('innexgo-client.json') as configfile:
