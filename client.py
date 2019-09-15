@@ -4,11 +4,11 @@ import os
 import sys
 import time
 import json
-import mfrc522
 import datetime
 import requests
 import threading
 import RPi.GPIO
+import mfrc522
 
 courses = None
 periods = None
