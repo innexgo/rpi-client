@@ -51,7 +51,6 @@ def updateInfo():
             ),
             None
         )
-        print(currentCourse)
     else:
         print('period is none')
         currentCourse = None
@@ -74,15 +73,24 @@ def updateInfoInfrequent():
     global courses
 
     millis = currentMillis()
-    courses = requests.get(
+    courseRequest = requests.get(
             f'{protocol}://{hostname}/course/'
             f'?locationId={locationId}&apiKey={apiKey}'
-                    ).json()
+                    )
+    if courseRequest.ok:
+        courses = courseRequest.json()
+    else:
+        print('request to server for courses failed')
+        courses = []
 
-    periods = requests.get(
+    periodsRequest = requests.get(
             f'{protocol}://{hostname}/period/?apiKey={apiKey}'
-                    ).json()
-    periods = sorted(periods, key = lambda i: i['initialTime'])
+                    )
+    if periodsRequest.ok:
+        periods = sorted(periodsRequest.json(), key = lambda i: i['initialTime'])
+    else:
+        print('request to server for periods failed')
+        periods = []
     updateInfo()
 
 # Load the config file
@@ -109,26 +117,37 @@ with open('innexgo-client.json') as configfile:
             (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
             if detectstatus == reader.MI_OK:
                 (uidstatus, uid) = reader.MFRC522_Anticoll()
-                # Convert uid to int
-                cardId = int(bytes(uid).hex(), 16)
 
                 # TODO add dings
                 if uidstatus == reader.MI_OK:
+                    # Convert uid to int
+                    cardId = int(bytes(uid).hex(), 16)
+                    print(f'logged {cardId}')
                     if currentCourse is None:
                         # There's not a class at the moment
                         noSessionRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/'
+                            f'{protocol}://{hostname}/encounter/new/'
                             f'?locationId={locationId}&cardId={cardId}'
                             f'&apiKey={apiKey}'
                         )
+                        if noSessionRequest.ok:
+                            encounter = noSessionRequest.json()
+                            print(encounter)
+                        else:
+                            print('request was unsuccessful')
                     else:
                         # There is a class at the moment
                         courseId = currentCourse['id']
                         sessionEncounterRequest = requests.get(
-                            f'{protocol}://{hostname}/encounter/'
+                            f'{protocol}://{hostname}/encounter/new/'
                             f'?locationId={locationId}&courseId={courseId}&cardId={cardId}'
                             f'&apiKey={apiKey}'
                         )
+                        if sessionEncounterRequest.ok:
+                            encounter = sessionEncounterRequest.json()
+                            print(encounter)
+                        else:
+                            print('request was unsuccessful')
                 time.sleep(0.5)
     except KeyboardInterrupt:
         RPi.GPIO.cleanup()
