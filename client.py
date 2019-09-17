@@ -28,6 +28,8 @@ locationId = None
 currentPeriod = None
 currentCourse = None
 
+soundPin=21
+
 def currentMillis():
     return round(1000 * time.time())
 
@@ -43,6 +45,23 @@ def setInterval(func, sec):
     t.start()
     return t
 
+def beep(hertz, time):
+	p=GPIO.PWM(pin,hertz)
+	p.start(50.0)
+	sleep(time)
+	p.stop()
+
+def beepUp():
+        beep(1000, 0.1)
+        beep(2000, 0.1)
+
+def beepDown():
+        beep(2000, 0.1)
+        beep(1000, 0.1)
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(pin,GPIO.OUT)
+beepUp()
 
 def updateInfo():
     global currentCourse
@@ -113,7 +132,6 @@ def sendEncounterWithCard(cardId):
                                             params={'apiKey':apiKey,
                                                     'locationId':locationId,
                                                     'cardId':cardId})
-            print(newEncounterRequest.content)
             if newEncounterRequest.ok:
                 encounter = newEncounterRequest.json()
                 print('logged encounter')
@@ -124,15 +142,22 @@ def sendEncounterWithCard(cardId):
             # There is a class at the moment
             courseId = currentCourse['id']
             newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
-                                            params={'apiKey':apiKey,
-                                                    'locationId':locationId,
-                                                    'courseId':courseId,
-                                                    'cardId':cardId})
-            print(newEncounterRequest.content)
+                                               params={'apiKey':apiKey,
+                                                       'locationId':locationId,
+                                                       'courseId':courseId,
+                                                       'cardId':cardId})
             if newEncounterRequest.ok:
                 encounter = newEncounterRequest.json()
                 print(f'logged encounter at class {currentCourse["subject"]}')
                 print(encounter)
+
+                sessionRequest = requests.get(f'{protocol}://{hostname}/session/',
+                                              params={'apiKey':apiKey,
+                                                      'inEncounterId':encounter['id']})
+                if sessionRequest.ok:
+                    # We find the number of sign ins caused by this encounter. If none, it was a sign out
+                    wasSignOut = len(list(filter(sessionRequest.json().filter(lambda
+
             else:
                 print('request was unsuccessful')
     except requests.exceptions.RequestException:
@@ -151,12 +176,14 @@ with open('innexgo-client.json') as configfile:
         print('error reading the json')
         sys.exit()
 
-    setInterval(updateInfoInfrequent, 1);
-
+    updateInfoInfrequent()
+    setInterval(updateInfoInfrequent, 30);
+    setInterval(updateInfo, 5)
 
     if isPi():
         try:
             reader = mfrc522.MFRC522()
+            print('ready')
             while True:
                 (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
                 if detectstatus == reader.MI_OK:
@@ -168,6 +195,6 @@ with open('innexgo-client.json') as configfile:
                         cardId = int(bytes(uid).hex(), 16)
                         print(f'logged {cardId}')
                         sendEncounterWithCard(cardId)
-                    time.sleep(0.5)
+                time.sleep(0.5)
         except KeyboardInterrupt:
             RPi.GPIO.cleanup()
