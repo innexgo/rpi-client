@@ -15,7 +15,7 @@ def isPi():
 
 # if raspberry pi
 if isPi():
-    import RPi.GPIO
+    import RPi.GPIO as GPIO
     import mfrc522
 
 
@@ -30,6 +30,7 @@ locationId = None
 currentPeriod = None
 currentCourse = None
 
+soundInitialized = False
 soundPin = 21
 
 
@@ -53,7 +54,12 @@ def setInterval(func, sec):
 
 
 def beep(hertz, time):
-    p = GPIO.PWM(pin, hertz)
+    # Set up soundPins for buzzer
+    if not soundInitialized:
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(soundPin, GPIO.OUT)
+
+    p = GPIO.PWM(soundPin, hertz)
     p.start(50.0)
     sleep(time)
     p.stop()
@@ -219,10 +225,6 @@ with open('innexgo-client.json') as configfile:
 
     if isPi():
         try:
-            # Set up pins for buzzer
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(pin, GPIO.OUT)
-
             reader=mfrc522.MFRC522()
 
             # We are now in business
@@ -241,4 +243,4 @@ with open('innexgo-client.json') as configfile:
                         sendEncounterWithCard(cardId)
                 time.sleep(0.5)
         except KeyboardInterrupt:
-            RPi.GPIO.cleanup()
+            GPIO.cleanup()
