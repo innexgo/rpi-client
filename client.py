@@ -31,8 +31,7 @@ currentPeriod = None
 currentCourse = None
 
 soundInitialized = False
-soundPin = 21
-
+soundPin = 40
 
 def currentMillis():
     return round(1000 * time.time())
@@ -53,16 +52,16 @@ def setInterval(func, sec):
     return t
 
 
-def beep(hertz, time):
+def beep(hertz, duration):
+
     # Set up soundPins for buzzer
     if not soundInitialized:
-        GPIO.setmode(GPIO.BCM)
+        GPIO.setmode(GPIO.BOARD)
         GPIO.setup(soundPin, GPIO.OUT)
-
-    p = GPIO.PWM(soundPin, hertz)
-    p.start(50.0)
-    sleep(time)
-    p.stop()
+    soundChannel = GPIO.PWM(soundPin, hertz)
+    soundChannel.start(50.0)
+    time.sleep(duration)
+    soundChannel.stop()
 
 
 def beepUp():
@@ -79,15 +78,15 @@ def beepFlat():
 
 def beepError():
     beep(1000, 0.1)
-    sleep(0.05)
+    time.sleep(0.05)
     beep(1000, 0.1)
-    sleep(0.05)
+    time.sleep(0.05)
     beep(1000, 0.1)
 
 def beepNetError():
     for i in range(0, 4):
         beep(1000, 0.01)
-        sleep(0.05)
+        time.sleep(0.05)
 
 def updateInfo():
     global currentCourse
@@ -189,6 +188,7 @@ def sendEncounterWithCard(cardId):
                                               params={'apiKey': apiKey,
                                                       'inEncounterId': encounter['id']})
                 if sessionRequest.ok:
+                    print('============================================')
                     # We find the number of sign ins caused by this encounter.
                     # If none, it was a sign out
                     wasSignOut = len(sessionRequest.json()) == 0
@@ -196,6 +196,8 @@ def sendEncounterWithCard(cardId):
                         beepDown()
                     else:
                         beepUp()
+                else:
+                    print(sessionRequest.content)
 
             else:
                 print('request was unsuccessful')
@@ -225,7 +227,7 @@ with open('innexgo-client.json') as configfile:
 
     if isPi():
         try:
-            reader=mfrc522.MFRC522()
+            reader=mfrc522.MFRC522(debugLevel='DEBUG')
 
             # We are now in business
             print('ready')
