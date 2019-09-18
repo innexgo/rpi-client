@@ -53,26 +53,35 @@ def setInterval(func, sec):
 
 
 def beep(hertz, time):
-	p = GPIO.PWM(pin, hertz)
-	p.start(50.0)
-	sleep(time)
-	p.stop()
+    p = GPIO.PWM(pin, hertz)
+    p.start(50.0)
+    sleep(time)
+    p.stop()
 
 
 def beepUp():
-        beep(1000, 0.1)
-        beep(2000, 0.1)
+    beep(1000, 0.1)
+    beep(2000, 0.1)
 
 
 def beepDown():
-        beep(2000, 0.1)
-        beep(1000, 0.1)
+    beep(2000, 0.1)
+    beep(1000, 0.1)
 
+def beepFlat():
+    beep(2000, 0.2)
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(pin, GPIO.OUT)
-beepUp()
+def beepError():
+    beep(1000, 0.1)
+    sleep(0.05)
+    beep(1000, 0.1)
+    sleep(0.05)
+    beep(1000, 0.1)
 
+def beepNetError():
+    for i in range(0, 4):
+        beep(1000, 0.01)
+        sleep(0.05)
 
 def updateInfo():
     global currentCourse
@@ -138,6 +147,7 @@ def updateInfoInfrequent():
             f'fetching data failed, could not connect to {protocol}://{hostname}')
         courses = []
         periods = []
+        beepNetError()
     updateInfo()
 
 
@@ -153,6 +163,7 @@ def sendEncounterWithCard(cardId):
                 encounter = newEncounterRequest.json()
                 print('logged encounter')
                 print(encounter)
+                beepFlat()
             else:
                 print('request was unsuccessful')
         else:
@@ -174,13 +185,20 @@ def sendEncounterWithCard(cardId):
                 if sessionRequest.ok:
                     # We find the number of sign ins caused by this encounter.
                     # If none, it was a sign out
-                    wasSignOut = len(list(filter(sessionRequest.json().filter(lambda
+                    wasSignOut = len(sessionRequest.json()) == 0
+                    if wasSignOut:
+                        beepDown()
+                    else:
+                        beepUp()
 
             else:
                 print('request was unsuccessful')
+                beepError()
     except requests.exceptions.RequestException:
         print(
             f'Sending encounter failed, could not connect to {protocol}://{hostname}')
+        beepNetError()
+
 
 # Load the config file
 with open('innexgo-client.json') as configfile:
@@ -201,8 +219,15 @@ with open('innexgo-client.json') as configfile:
 
     if isPi():
         try:
+            # Set up pins for buzzer
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(pin, GPIO.OUT)
+
             reader=mfrc522.MFRC522()
+
+            # We are now in business
             print('ready')
+            beepUp()
             while True:
                 (detectstatus, tagtype)=reader.MFRC522_Request(reader.PICC_REQIDL)
                 if detectstatus == reader.MI_OK:
