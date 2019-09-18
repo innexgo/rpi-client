@@ -8,8 +8,10 @@ import datetime
 import requests
 import threading
 
+
 def isPi():
     return sys.implementation._multiarch == 'arm-linux-gnueabihf'
+
 
 # if raspberry pi
 if isPi():
@@ -28,15 +30,19 @@ locationId = None
 currentPeriod = None
 currentCourse = None
 
-soundPin=21
+soundPin = 21
+
 
 def currentMillis():
     return round(1000 * time.time())
 
+
 def printMillis(millis):
-    print(datetime.datetime.fromtimestamp(millis/1000.0))
+    print(datetime.datetime.fromtimestamp(millis / 1000.0))
 
 # setInterval for python
+
+
 def setInterval(func, sec):
     def func_wrapper():
         setInterval(func, sec)
@@ -45,23 +51,28 @@ def setInterval(func, sec):
     t.start()
     return t
 
+
 def beep(hertz, time):
-	p=GPIO.PWM(pin,hertz)
+	p = GPIO.PWM(pin, hertz)
 	p.start(50.0)
 	sleep(time)
 	p.stop()
+
 
 def beepUp():
         beep(1000, 0.1)
         beep(2000, 0.1)
 
+
 def beepDown():
         beep(2000, 0.1)
         beep(1000, 0.1)
 
+
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(pin,GPIO.OUT)
+GPIO.setup(pin, GPIO.OUT)
 beepUp()
+
 
 def updateInfo():
     global currentCourse
@@ -73,7 +84,8 @@ def updateInfo():
         # get first period that is current
         currentPeriod = next(
             filter(
-                lambda p : (millis > p['initialTime'] and millis < p['endTime']),
+                lambda p: (millis > p['initialTime']
+                           and millis < p['endTime']),
                 periods
             ),
             None
@@ -86,7 +98,7 @@ def updateInfo():
         # get course with current location and period
         currentCourse = next(
             filter(
-                lambda c : (c['period'] == currentPeriod['period']),
+                lambda c: (c['period'] == currentPeriod['period']),
                 courses
             ),
             None
@@ -94,6 +106,7 @@ def updateInfo():
     else:
         print('courses is none or currentPeriod is none')
         currentCourse = None
+
 
 def updateInfoInfrequent():
     global periods
@@ -103,8 +116,8 @@ def updateInfoInfrequent():
         millis = currentMillis()
         courseRequest = requests.get(f'{protocol}://{hostname}/course/',
                                      params={
-                                         'locationId':locationId,
-                                         'apiKey':apiKey})
+                                         'locationId': locationId,
+                                         'apiKey': apiKey})
         if courseRequest.ok:
             courses = courseRequest.json()
         else:
@@ -112,26 +125,30 @@ def updateInfoInfrequent():
             courses = []
 
         periodsRequest = requests.get(f'{protocol}://{hostname}/period/',
-                                      params={'apiKey':apiKey})
+                                      params={'apiKey': apiKey})
         if periodsRequest.ok:
-            periods = sorted(periodsRequest.json(), key = lambda i: i['initialTime'])
+            periods = sorted(
+    periodsRequest.json(),
+     key=lambda i: i['initialTime'])
         else:
             print('request to server for periods failed')
             periods = []
     except requests.exceptions.RequestException:
-        print(f'fetching data failed, could not connect to {protocol}://{hostname}')
+        print(
+            f'fetching data failed, could not connect to {protocol}://{hostname}')
         courses = []
         periods = []
     updateInfo()
+
 
 def sendEncounterWithCard(cardId):
     try:
         if currentCourse is None:
             # There's not a class at the moment
             newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
-                                            params={'apiKey':apiKey,
-                                                    'locationId':locationId,
-                                                    'cardId':cardId})
+                                            params={'apiKey': apiKey,
+                                                    'locationId': locationId,
+                                                    'cardId': cardId})
             if newEncounterRequest.ok:
                 encounter = newEncounterRequest.json()
                 print('logged encounter')
@@ -142,35 +159,37 @@ def sendEncounterWithCard(cardId):
             # There is a class at the moment
             courseId = currentCourse['id']
             newEncounterRequest = requests.get(f'{protocol}://{hostname}/encounter/new/',
-                                               params={'apiKey':apiKey,
-                                                       'locationId':locationId,
-                                                       'courseId':courseId,
-                                                       'cardId':cardId})
+                                               params={'apiKey': apiKey,
+                                                       'locationId': locationId,
+                                                       'courseId': courseId,
+                                                       'cardId': cardId})
             if newEncounterRequest.ok:
                 encounter = newEncounterRequest.json()
                 print(f'logged encounter at class {currentCourse["subject"]}')
                 print(encounter)
 
                 sessionRequest = requests.get(f'{protocol}://{hostname}/session/',
-                                              params={'apiKey':apiKey,
-                                                      'inEncounterId':encounter['id']})
+                                              params={'apiKey': apiKey,
+                                                      'inEncounterId': encounter['id']})
                 if sessionRequest.ok:
-                    # We find the number of sign ins caused by this encounter. If none, it was a sign out
+                    # We find the number of sign ins caused by this encounter.
+                    # If none, it was a sign out
                     wasSignOut = len(list(filter(sessionRequest.json().filter(lambda
 
             else:
                 print('request was unsuccessful')
     except requests.exceptions.RequestException:
-        print(f'Sending encounter failed, could not connect to {protocol}://{hostname}')
+        print(
+            f'Sending encounter failed, could not connect to {protocol}://{hostname}')
 
 # Load the config file
 with open('innexgo-client.json') as configfile:
-    config = json.load(configfile)
+    config=json.load(configfile)
 
-    hostname = config['hostname']
-    protocol = config['protocol']
-    apiKey = config['apiKey']
-    locationId = config['locationId']
+    hostname=config['hostname']
+    protocol=config['protocol']
+    apiKey=config['apiKey']
+    locationId=config['locationId']
 
     if apiKey is None or hostname is None or locationId is None:
         print('error reading the json')
@@ -182,17 +201,17 @@ with open('innexgo-client.json') as configfile:
 
     if isPi():
         try:
-            reader = mfrc522.MFRC522()
+            reader=mfrc522.MFRC522()
             print('ready')
             while True:
-                (detectstatus, tagtype) = reader.MFRC522_Request(reader.PICC_REQIDL)
+                (detectstatus, tagtype)=reader.MFRC522_Request(reader.PICC_REQIDL)
                 if detectstatus == reader.MI_OK:
-                    (uidstatus, uid) = reader.MFRC522_Anticoll()
+                    (uidstatus, uid)=reader.MFRC522_Anticoll()
 
                     # TODO add dings
                     if uidstatus == reader.MI_OK:
                         # Convert uid to int
-                        cardId = int(bytes(uid).hex(), 16)
+                        cardId=int(bytes(uid).hex(), 16)
                         print(f'logged {cardId}')
                         sendEncounterWithCard(cardId)
                 time.sleep(0.5)
