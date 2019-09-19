@@ -209,7 +209,7 @@ def sendEncounterWithCard(cardId):
 
 
 # Load the config file
-with open('innexgo-client.json') as configfile:
+with open('/boot/innexgo-client.json') as configfile:
     config=json.load(configfile)
 
     hostname=config['hostname']
@@ -243,6 +243,6 @@ with open('innexgo-client.json') as configfile:
                         cardId=int(bytes(uid).hex(), 16)
                         print(f'logged {cardId}')
                         sendEncounterWithCard(cardId)
-                time.sleep(0.5)
+                time.sleep(0.1)
         except KeyboardInterrupt:
             GPIO.cleanup()
