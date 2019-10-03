@@ -20,6 +20,10 @@ cp innexgo-client.json mnt/
 cp wpa_supplicant.conf mnt/
 
 umount mnt
+mount "${DRIVE}2" mnt
+echo "@reboot /home/pi/rpi-client/wrapper.py" >> 
+
+
 rmdir mnt
 
 # Mount ext4 part on the mount directory
