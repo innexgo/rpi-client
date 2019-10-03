@@ -9,6 +9,11 @@ if [[ $# -ne 1 ]]; then
     exit 2
 fi
 
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
+
 DRIVE=$1
 
 mkdir -p mnt
@@ -20,13 +25,16 @@ cp innexgo-client.json mnt/
 cp wpa_supplicant.conf mnt/
 
 umount mnt
-mount "${DRIVE}2" mnt
-echo "@reboot /home/pi/rpi-client/wrapper.py" >> 
-
-
-rmdir mnt
 
 # Mount ext4 part on the mount directory
-#mount "${DRIVE}2" mnt
+mount "${DRIVE}2" mnt
 
+# clone to here
+git clone https://github.com/innexgo/rpi-client mnt/home/pi/rpi-client
 
+# Start at boot
+echo "@reboot /home/pi/rpi-client/wrapper.py" >> mnt/var/spool/cron/crontabs/pi
+
+umount mnt
+
+rmdir mnt
