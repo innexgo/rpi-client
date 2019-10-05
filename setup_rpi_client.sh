@@ -4,8 +4,8 @@
 # This file to be run on host to set up raspberry pi
 set -e
 
-if [[ $# -ne 1 ]]; then
-    echo "Illegal number of parameters, need 1 drive"
+if [[ $# -ne 2 ]]; then
+    echo "Illegal number of parameters, need 1 drive and 1 hostname of the device"
     exit 2
 fi
 
@@ -34,6 +34,11 @@ git clone https://github.com/innexgo/rpi-client mnt/home/pi/rpi-client
 
 # Start at boot
 echo "@reboot /home/pi/rpi-client/wrapper.py" >> mnt/var/spool/cron/crontabs/pi
+
+# Set the hostname
+echo $2 > mnt/etc/hostname
+sed -i "s/raspberrypi/$2/g"
+
 
 umount mnt
 
