@@ -19,6 +19,7 @@ DRIVE=$1
 mkdir -p mnt
 mount "${DRIVE}1" mnt
 touch mnt/ssh
+echo "dtparam=spi=on" >> mnt/config.txt
 
 # Copy files into the boot
 cp innexgo-client.json mnt/
@@ -31,13 +32,14 @@ mount "${DRIVE}2" mnt
 
 # clone to here
 git clone https://github.com/innexgo/rpi-client mnt/home/pi/rpi-client
+chown -R pi:pi mnt/home/pi/rpi-client
 
 # Start at boot
 echo "@reboot /home/pi/rpi-client/wrapper.py" >> mnt/var/spool/cron/crontabs/pi
 
 # Set the hostname
 echo $2 > mnt/etc/hostname
-sed -i "s/raspberrypi/$2/g"
+sed -i "s/raspberrypi/$2/g" mnt/etc/hosts
 
 
 umount mnt
