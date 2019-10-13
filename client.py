@@ -17,6 +17,8 @@ def isPi():
 if isPi():
     import RPi.GPIO as GPIO
     import mfrc522
+else:
+    print('not a pi lmao')
 
 
 courses = None
