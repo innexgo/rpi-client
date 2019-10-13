@@ -42,6 +42,7 @@ echo $2 > mnt/etc/hostname
 sed -i "s/raspberrypi/$2/g" mnt/etc/hosts
 
 
+
 umount mnt
 
 rmdir mnt

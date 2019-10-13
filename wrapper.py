@@ -10,14 +10,14 @@ import sys
 import time
 import subprocess
 
-UPDATE_NOW_PATH = '~/updatenow'
+UPDATE_NOW_PATH = '/boot/updatenow'
 
 def update():
+    print('Git pulling!')
     retcode = subprocess.call(['git', 'pull'])
     return retcode == 0
 
-
-subprocess.popen(['python3', 'client.py'])
+subprocess.Popen(['python3', 'client.py'])
 
 while True:
     if os.path.isfile(UPDATE_NOW_PATH):
@@ -28,8 +28,8 @@ while True:
             subprocess.call(['sudo', 'shutdown', '-r', 'now'])
         else:
             print("git pull failed. network most likely disconnected. Waiting 5 min to try again")
-            time.sleep(5*60)
+            time.sleep(60*5)
             continue
     else:
-        # sleep 10 min
-        time.sleep(10*60)
+        # sleep 1 min
+        time.sleep(60)
