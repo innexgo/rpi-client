@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python3
 
 # purpose:
 # reboot every night at 12am
