@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import json
+import logging
 import datetime
 import requests
 import threading
@@ -21,10 +22,16 @@ else:
     print('not a pi lmao')
 
 
+# Server Requests
 apiKey = None
 protocol = None
 hostname = None
 locationId = None
+
+
+# RFID read
+rfidKey = None
+
 
 soundInitialized = False
 soundPin = 40
@@ -127,10 +134,17 @@ with open('/boot/innexgo-client.json') as configfile:
     protocol=config['protocol']
     apiKey=config['apiKey']
     locationId=config['locationId']
+    rfidKey=config['rfidKey']
 
-    if apiKey is None or hostname is None or locationId is None:
+    if apiKey is None or hostname is None or locationId is None or rfidKey is None:
         print('error reading the json')
         sys.exit()
+
+
+    # Now we enable logging
+    logging.basicConfig(filename="~/client.log",
+                        format='%(asctime)s %(message)s',
+                        filemode='w')
 
     if isPi():
         try:
@@ -144,11 +158,29 @@ with open('/boot/innexgo-client.json') as configfile:
                 if detectstatus == reader.MI_OK:
                     (uidstatus, uid)=reader.MFRC522_Anticoll()
 
-                    # TODO add dings
                     if uidstatus == reader.MI_OK:
-                        # Convert uid to int
+
                         cardId=int(bytes(uid).hex(), 16)
                         print(f'logged {cardId}')
+
+                        # Select the scanned tag
+                        reader.MFRC522_SelectTag(uid)
+
+                        # Authenticate
+                        authStatus = reader.MFRC522_Auth(MIFAREReader.PICC_AUTHENT1A, 8, rfidKey, uid)
+
+                        # Check if authenticated
+                        if authStatus == reader.MI_OK:
+
+                            # Read Sector 1
+                            addr, data = reader.MFRC522_Read(1)
+
+                            MIFAREReader.MFRC522_StopCrypto1()
+                        else:
+                            print("Authentication error")
+
+                        # Convert uid to int
+
                         sendEncounterWithCard(cardId)
                 time.sleep(0.1)
         except KeyboardInterrupt:
