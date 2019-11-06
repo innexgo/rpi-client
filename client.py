@@ -92,6 +92,41 @@ def beepNetError():
         time.sleep(0.05)
 
 
+def sendEncounterWithStudentID(studentId):
+    try:
+        newEncounterRequest = requests.get(f'{protocol}://{hostname}/api/encounter/new/',
+                                           params={'apiKey': apiKey,
+                                                   'locationId': locationId,
+                                                   'studentId': studentID})
+        if newEncounterRequest.ok:
+            encounter = newEncounterRequest.json()
+            print(encounter)
+
+            sessionRequest = requests.get(f'{protocol}://{hostname}/api/session/',
+                                          params={'apiKey': apiKey,
+                                                  'inEncounterId': encounter['id']})
+            if sessionRequest.ok:
+                print('============================================')
+                # We find the number of sign ins caused by this encounter.
+                # If none, it was a sign out
+                wasSignOut = len(sessionRequest.json()) == 0
+                if wasSignOut:
+                    beepDown()
+                else:
+                    beepUp()
+            else:
+                print(sessionRequest.content)
+
+        else:
+            print('request was unsuccessful')
+            beepError()
+    except requests.exceptions.RequestException:
+        print(
+            f'Sending encounter failed, could not connect to {protocol}://{hostname}')
+        beepNetError()
+
+
+
 def sendEncounterWithCard(cardId):
     try:
         newEncounterRequest = requests.get(f'{protocol}://{hostname}/api/encounter/new/',
