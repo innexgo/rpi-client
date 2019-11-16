@@ -104,16 +104,16 @@ def sendEncounter(studentId):
                 # If none, it was a sign out
                 wasSignOut = len(sessionRequest.json()) == 0
                 if wasSignOut:
-                    logging.info(f'Encounter: Successfully signed out student {student}')
+                    logging.info(f'Encounter: Successfully signed out student {studentId}')
                     beepDown()
                 else:
-                    logging.info(f'Encounter: Successfully signed in student {student}')
+                    logging.info(f'Encounter: Successfully signed in student {studentId}')
                     beepUp()
             else:
                 logging.error(f'Encounter: HTTP Error: {sessionRequest.content}')
-
+                beepError()
         else:
-            logging.error('request was unsuccessful')
+            logging.error(f'Encounter: HTTP Error: {newEncounterRequest.content}')
             beepError()
     except requests.exceptions.RequestException:
         logging.error(f'Encounter: Could not connect to {protocol}://{hostname}')
@@ -153,7 +153,7 @@ with open('/boot/innexgo-client.json') as configfile:
                     if uidstatus == reader.MI_OK:
                         # Calculate Card Id
                         cardId=int(bytes(uid).hex(), 16)
-                        logging.info(f'RFID: Detected Tag {cardID}')
+                        logging.info(f'RFID: Detected Tag {cardId}')
                         # Now read
                         reader.MFRC522_SelectTag(uid)
                         data = reader.MFRC522_Read(sector)
