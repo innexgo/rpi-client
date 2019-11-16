@@ -22,17 +22,13 @@ else:
     print('not a pi lmao')
 
 
-# Server Requests
 apiKey = None
 protocol = None
 hostname = None
 locationId = None
 
 
-# RFID read
-rfidKey = None
-
-
+sector = 10
 soundInitialized = False
 soundPin = 40
 
@@ -65,6 +61,7 @@ def beep(hertz, duration):
     soundChannel.start(50.0)
     time.sleep(duration)
     soundChannel.stop()
+    GPIO.output(soundPin, 0)
 
 
 def beepUp():
@@ -91,132 +88,79 @@ def beepNetError():
         beep(1000, 0.01)
         time.sleep(0.05)
 
-
-def sendEncounterWithStudentID(studentId):
+def sendEncounter(studentId):
     try:
         newEncounterRequest = requests.get(f'{protocol}://{hostname}/api/encounter/new/',
                                            params={'apiKey': apiKey,
                                                    'locationId': locationId,
-                                                   'studentId': studentID})
+                                                   'studentId': studentId})
         if newEncounterRequest.ok:
             encounter = newEncounterRequest.json()
-            print(encounter)
-
             sessionRequest = requests.get(f'{protocol}://{hostname}/api/session/',
                                           params={'apiKey': apiKey,
                                                   'inEncounterId': encounter['id']})
             if sessionRequest.ok:
-                print('============================================')
                 # We find the number of sign ins caused by this encounter.
                 # If none, it was a sign out
                 wasSignOut = len(sessionRequest.json()) == 0
                 if wasSignOut:
+                    logging.info(f'Encounter: Successfully signed out student {student}')
                     beepDown()
                 else:
+                    logging.info(f'Encounter: Successfully signed in student {student}')
                     beepUp()
             else:
-                print(sessionRequest.content)
+                logging.error(f'Encounter: HTTP Error: {sessionRequest.content}')
 
         else:
-            print('request was unsuccessful')
+            logging.error('request was unsuccessful')
             beepError()
     except requests.exceptions.RequestException:
-        print(
-            f'Sending encounter failed, could not connect to {protocol}://{hostname}')
-        beepNetError()
-
-
-
-def sendEncounterWithCard(cardId):
-    try:
-        newEncounterRequest = requests.get(f'{protocol}://{hostname}/api/encounter/new/',
-                                           params={'apiKey': apiKey,
-                                                   'locationId': locationId,
-                                                   'cardId': cardId})
-        if newEncounterRequest.ok:
-            encounter = newEncounterRequest.json()
-            print(encounter)
-
-            sessionRequest = requests.get(f'{protocol}://{hostname}/api/session/',
-                                          params={'apiKey': apiKey,
-                                                  'inEncounterId': encounter['id']})
-            if sessionRequest.ok:
-                print('============================================')
-                # We find the number of sign ins caused by this encounter.
-                # If none, it was a sign out
-                wasSignOut = len(sessionRequest.json()) == 0
-                if wasSignOut:
-                    beepDown()
-                else:
-                    beepUp()
-            else:
-                print(sessionRequest.content)
-
-        else:
-            print('request was unsuccessful')
-            beepError()
-    except requests.exceptions.RequestException:
-        print(
-            f'Sending encounter failed, could not connect to {protocol}://{hostname}')
+        logging.error(f'Encounter: Could not connect to {protocol}://{hostname}')
         beepNetError()
 
 
 # Load the config file
 with open('/boot/innexgo-client.json') as configfile:
+    # Configure logging
+    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(filename='~/rpi_client_log.txt', filemode='w', 
+            format='%(asctime)s - %(levelname)s - %(message)s')
+
+    # Configure configs
     config=json.load(configfile)
 
     hostname=config['hostname']
     protocol=config['protocol']
     apiKey=config['apiKey']
     locationId=config['locationId']
-    rfidKey=config['rfidKey']
 
-    if apiKey is None or hostname is None or locationId is None or rfidKey is None:
+    if protocol is None or apiKey is None or hostname is None or locationId is None:
         print('error reading the json')
         sys.exit()
-
-
-    # Now we enable logging
-    logging.basicConfig(filename="~/client.log",
-                        format='%(asctime)s %(message)s',
-                        filemode='w')
 
     if isPi():
         try:
             reader=mfrc522.MFRC522(debugLevel='DEBUG')
 
             # We are now in business
-            print('ready')
             beepUp()
+            print('ready')
             while True:
                 (detectstatus, tagtype)=reader.MFRC522_Request(reader.PICC_REQIDL)
                 if detectstatus == reader.MI_OK:
-                    (uidstatus, uid)=reader.MFRC522_Anticoll()
-
+                    (uidstatus, uid) = reader.MFRC522_Anticoll()
                     if uidstatus == reader.MI_OK:
-
+                        # Calculate Card Id
                         cardId=int(bytes(uid).hex(), 16)
-                        print(f'logged {cardId}')
-
-                        # Select the scanned tag
+                        logging.info(f'RFID: Detected Tag {cardID}')
+                        # Now read
                         reader.MFRC522_SelectTag(uid)
-
-                        # Authenticate
-                        authStatus = reader.MFRC522_Auth(MIFAREReader.PICC_AUTHENT1A, 8, rfidKey, uid)
-
-                        # Check if authenticated
-                        if authStatus == reader.MI_OK:
-
-                            # Read Sector 1
-                            addr, data = reader.MFRC522_Read(1)
-
-                            MIFAREReader.MFRC522_StopCrypto1()
-                        else:
-                            print("Authentication error")
-
-                        # Convert uid to int
-
-                        sendEncounterWithCard(cardId)
-                time.sleep(0.1)
+                        data = reader.MFRC522_Read(sector)
+                        logging.info(f'RFID: From sector {sector} got data {data}')
+                        studentId = int.from_bytes(bytes(data[0:4]), byteorder="little")
+                        logging.info(f'RFID: Got studentId {studentId}')
+                        sendEncounter(studentId)
+                        time.sleep(0.1)
         except KeyboardInterrupt:
             GPIO.cleanup()
