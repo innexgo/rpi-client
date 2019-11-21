@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import json
+import pathlib
 import logging
 import datetime
 import requests
@@ -123,9 +124,12 @@ def sendEncounter(studentId):
 # Load the config file
 with open('/boot/innexgo-client.json') as configfile:
     # Configure logging
-    logging.basicConfig(level=logging.DEBUG)
-    logging.basicConfig(filename='~/rpi_client_log.txt', filemode='w', 
-            format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s - %(levelname)s - %(message)s',
+                        handlers=[
+                            logging.FileHandler(f'{pathlib.Path.home()}/client-log.txt'),
+                            logging.StreamHandler()
+                        ])
 
     # Configure configs
     config=json.load(configfile)
@@ -145,22 +149,26 @@ with open('/boot/innexgo-client.json') as configfile:
 
             # We are now in business
             beepUp()
-            print('ready')
+            logging.info('==== STARTED ===')
             while True:
                 (detectstatus, tagtype)=reader.MFRC522_Request(reader.PICC_REQIDL)
                 if detectstatus == reader.MI_OK:
                     (uidstatus, uid) = reader.MFRC522_Anticoll()
                     if uidstatus == reader.MI_OK:
-                        # Calculate Card Id
-                        cardId=int(bytes(uid).hex(), 16)
-                        logging.info(f'RFID: Detected Tag {cardId}')
-                        # Now read
+                        logging.info(f'RFID: Detected Tag {uid}')
+
+                        # Select and read tag
                         reader.MFRC522_SelectTag(uid)
                         data = reader.MFRC522_Read(sector)
-                        logging.info(f'RFID: From sector {sector} got data {data}')
-                        studentId = int.from_bytes(bytes(data[0:4]), byteorder="little")
-                        logging.info(f'RFID: Got studentId {studentId}')
-                        sendEncounter(studentId)
-                        time.sleep(0.1)
+
+                        if data not None and len(data) >= 4:
+                            studentId = int.from_bytes(bytes(data[0:4]), byteorder="little")
+                            logging.info(f'RFID: Got studentId {studentId}')
+                            sendEncounter(studentId)
+                            time.sleep(0.1)
+                        else:
+                            logging.error(f'RFID: Error reading tag data')
+                    else:
+                        logging.error(f'RFID: Error reading tag info')
         except KeyboardInterrupt:
             GPIO.cleanup()
