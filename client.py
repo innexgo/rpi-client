@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import json
+import logging
 import datetime
 import requests
 import threading
@@ -26,6 +27,8 @@ protocol = None
 hostname = None
 locationId = None
 
+
+sector = 10
 soundInitialized = False
 soundPin = 40
 
@@ -58,6 +61,7 @@ def beep(hertz, duration):
     soundChannel.start(50.0)
     time.sleep(duration)
     soundChannel.stop()
+    GPIO.output(soundPin, 0)
 
 
 def beepUp():
@@ -84,43 +88,46 @@ def beepNetError():
         beep(1000, 0.01)
         time.sleep(0.05)
 
-
-def sendEncounterWithCard(cardId):
+def sendEncounter(studentId):
     try:
         newEncounterRequest = requests.get(f'{protocol}://{hostname}/api/encounter/new/',
                                            params={'apiKey': apiKey,
                                                    'locationId': locationId,
-                                                   'cardId': cardId})
+                                                   'studentId': studentId})
         if newEncounterRequest.ok:
             encounter = newEncounterRequest.json()
-            print(encounter)
-
             sessionRequest = requests.get(f'{protocol}://{hostname}/api/session/',
                                           params={'apiKey': apiKey,
                                                   'inEncounterId': encounter['id']})
             if sessionRequest.ok:
-                print('============================================')
                 # We find the number of sign ins caused by this encounter.
                 # If none, it was a sign out
                 wasSignOut = len(sessionRequest.json()) == 0
                 if wasSignOut:
+                    logging.info(f'Encounter: Successfully signed out student {studentId}')
                     beepDown()
                 else:
+                    logging.info(f'Encounter: Successfully signed in student {studentId}')
                     beepUp()
             else:
-                print(sessionRequest.content)
-
+                logging.error(f'Encounter: HTTP Error: {sessionRequest.content}')
+                beepError()
         else:
-            print('request was unsuccessful')
+            logging.error(f'Encounter: HTTP Error: {newEncounterRequest.content}')
             beepError()
     except requests.exceptions.RequestException:
-        print(
-            f'Sending encounter failed, could not connect to {protocol}://{hostname}')
+        logging.error(f'Encounter: Could not connect to {protocol}://{hostname}')
         beepNetError()
 
 
 # Load the config file
 with open('/boot/innexgo-client.json') as configfile:
+    # Configure logging
+    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(filename='~/rpi_client_log.txt', filemode='w', 
+            format='%(asctime)s - %(levelname)s - %(message)s')
+
+    # Configure configs
     config=json.load(configfile)
 
     hostname=config['hostname']
@@ -128,7 +135,7 @@ with open('/boot/innexgo-client.json') as configfile:
     apiKey=config['apiKey']
     locationId=config['locationId']
 
-    if apiKey is None or hostname is None or locationId is None:
+    if protocol is None or apiKey is None or hostname is None or locationId is None:
         print('error reading the json')
         sys.exit()
 
@@ -137,19 +144,23 @@ with open('/boot/innexgo-client.json') as configfile:
             reader=mfrc522.MFRC522(debugLevel='DEBUG')
 
             # We are now in business
-            print('ready')
             beepUp()
+            print('ready')
             while True:
                 (detectstatus, tagtype)=reader.MFRC522_Request(reader.PICC_REQIDL)
                 if detectstatus == reader.MI_OK:
-                    (uidstatus, uid)=reader.MFRC522_Anticoll()
-
-                    # TODO add dings
+                    (uidstatus, uid) = reader.MFRC522_Anticoll()
                     if uidstatus == reader.MI_OK:
-                        # Convert uid to int
+                        # Calculate Card Id
                         cardId=int(bytes(uid).hex(), 16)
-                        print(f'logged {cardId}')
-                        sendEncounterWithCard(cardId)
-                time.sleep(0.1)
+                        logging.info(f'RFID: Detected Tag {cardId}')
+                        # Now read
+                        reader.MFRC522_SelectTag(uid)
+                        data = reader.MFRC522_Read(sector)
+                        logging.info(f'RFID: From sector {sector} got data {data}')
+                        studentId = int.from_bytes(bytes(data[0:4]), byteorder="little")
+                        logging.info(f'RFID: Got studentId {studentId}')
+                        sendEncounter(studentId)
+                        time.sleep(0.1)
         except KeyboardInterrupt:
             GPIO.cleanup()
