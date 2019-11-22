@@ -161,7 +161,7 @@ with open('/boot/innexgo-client.json') as configfile:
                         reader.MFRC522_SelectTag(uid)
                         data = reader.MFRC522_Read(sector)
 
-                        if data not None and len(data) >= 4:
+                        if data is not None and len(data) >= 4:
                             studentId = int.from_bytes(bytes(data[0:4]), byteorder="little")
                             logging.info(f'RFID: Got studentId {studentId}')
                             sendEncounter(studentId)
