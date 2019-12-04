@@ -52,12 +52,7 @@ def setInterval(func, sec):
     return t
 
 
-def beep(hertz, duration):
-
-    # Set up soundPins for buzzer
-    if not soundInitialized:
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(soundPin, GPIO.OUT)
+def beepActive(hertz, duration):
     soundChannel = GPIO.PWM(soundPin, hertz)
     soundChannel.start(50.0)
     time.sleep(duration)
@@ -65,12 +60,12 @@ def beep(hertz, duration):
     GPIO.output(soundPin, 0)
 
 
-def beepUp():
+def beepActiveUp():
     beep(1000, 0.1)
     beep(2000, 0.1)
 
 
-def beepDown():
+def beepActiveDown():
     beep(2000, 0.1)
     beep(1000, 0.1)
 
@@ -85,9 +80,29 @@ def beepError():
     beep(1000, 0.1)
 
 def beepNetError():
-    for i in range(0, 4):
+    for i in range(0, 6):
         beep(1000, 0.01)
         time.sleep(0.05)
+
+
+def beep(hertz, duration):
+    GPIO.output(soundPin, GPIO.LOW)
+    time.sleep(duration)
+    GPIO.output(soundPin, GPIO.HIGH)
+
+def beepUp():
+    beep(1000, 0.1)
+    time.sleep(0.01)
+    beep(1000, 0.1)
+    time.sleep(0.01)
+    beep(2000, 0.2)
+
+def beepDown():
+    beep(2000, 0.2)
+    time.sleep(0.01)
+    beep(1000, 0.1)
+    time.sleep(0.01)
+    beep(1000, 0.1)
 
 def sendEncounter(studentId):
     try:
@@ -123,6 +138,8 @@ def sendEncounter(studentId):
 
 # Load the config file
 with open('/boot/innexgo-client.json') as configfile:
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(soundPin, GPIO.OUT)
     # Configure logging
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s - %(levelname)s - %(message)s',
