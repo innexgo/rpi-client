@@ -170,5 +170,7 @@ with open('/boot/innexgo-client.json') as configfile:
                             logging.error(f'RFID: Error reading tag data')
                     else:
                         logging.error(f'RFID: Error reading tag info')
+                else:
+                    time.sleep(0.1)
         except KeyboardInterrupt:
             GPIO.cleanup()
