@@ -73,11 +73,9 @@ def beepFlat():
     beep(2000, 0.2)
 
 def beepError():
-    beep(1000, 0.1)
-    time.sleep(0.05)
-    beep(1000, 0.1)
-    time.sleep(0.05)
-    beep(1000, 0.1)
+    for i in range(0, 6):
+        beep(1000, 0.01)
+        time.sleep(0.05)
 
 def beepNetError():
     for i in range(0, 6):
@@ -92,16 +90,16 @@ def beep(hertz, duration):
 
 def beepUp():
     beep(1000, 0.1)
-    time.sleep(0.01)
+    time.sleep(0.05)
     beep(1000, 0.1)
-    time.sleep(0.01)
-    beep(2000, 0.2)
+    time.sleep(0.07)
+    beep(2000, 0.3)
 
 def beepDown():
     beep(2000, 0.2)
-    time.sleep(0.01)
+    time.sleep(0.05)
     beep(1000, 0.1)
-    time.sleep(0.01)
+    time.sleep(0.05)
     beep(1000, 0.1)
 
 def sendEncounter(studentId):
@@ -185,9 +183,11 @@ with open('/boot/innexgo-client.json') as configfile:
                             time.sleep(0.1)
                         else:
                             logging.error(f'RFID: Error reading tag data')
+                            beepError()
                     else:
                         logging.error(f'RFID: Error reading tag info')
+                        beepError()
                 else:
-                    time.sleep(0.1)
+                    time.sleep(0.05)
         except KeyboardInterrupt:
             GPIO.cleanup()
