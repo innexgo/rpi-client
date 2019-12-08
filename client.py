@@ -22,7 +22,7 @@ if isPi():
 else:
     print('not a pi lmao')
 
-
+active = None
 apiKey = None
 protocol = None
 hostname = None
@@ -52,55 +52,46 @@ def setInterval(func, sec):
     return t
 
 
-def beepActive(hertz, duration):
+def beep(hertz, duration):
     soundChannel = GPIO.PWM(soundPin, hertz)
     soundChannel.start(50.0)
     time.sleep(duration)
     soundChannel.stop()
-    GPIO.output(soundPin, 0)
+    GPIO.output(soundPin, GPIO.HIGH)
 
+def beepActive(duration):
+    GPIO.output(soundPin, GPIO.LOW)
+    time.sleep(duration)
+    GPIO.output(soundPin, GPIO.HIGH)
 
-def beepActiveUp():
-    beep(1000, 0.1)
-    beep(2000, 0.1)
+def beepUp():
+    if active:
+        beepActive(2000, 0.3)
+    else:
+        beep(1000, 0.1)
+        beep(2000, 0.1)
 
-
-def beepActiveDown():
-    beep(2000, 0.1)
-    beep(1000, 0.1)
+def beepDown():
+    if active:
+        beepActive(2000, 0.15)
+        time.sleep(0.05)
+        beepActive(1000, 0.15)
+    else:
+        beep(2000, 0.1)
+        beep(1000, 0.1)
 
 def beepFlat():
     beep(2000, 0.2)
 
 def beepError():
-    for i in range(0, 6):
-        beep(1000, 0.01)
+    for i in range(0, 3):
+        beep(1000, 0.1)
         time.sleep(0.05)
 
 def beepNetError():
     for i in range(0, 6):
         beep(1000, 0.01)
         time.sleep(0.05)
-
-
-def beep(hertz, duration):
-    GPIO.output(soundPin, GPIO.LOW)
-    time.sleep(duration)
-    GPIO.output(soundPin, GPIO.HIGH)
-
-def beepUp():
-    beep(1000, 0.1)
-    time.sleep(0.05)
-    beep(1000, 0.1)
-    time.sleep(0.07)
-    beep(2000, 0.3)
-
-def beepDown():
-    beep(2000, 0.2)
-    time.sleep(0.05)
-    beep(1000, 0.1)
-    time.sleep(0.05)
-    beep(1000, 0.1)
 
 def sendEncounter(studentId):
     try:
@@ -144,8 +135,9 @@ with open('/boot/innexgo-client.json') as configfile:
     protocol=config['protocol']
     apiKey=config['apiKey']
     locationId=config['locationId']
+    active=config['active']
 
-    if protocol is None or apiKey is None or hostname is None or locationId is None:
+    if protocol is None or apiKey is None or hostname is None or locationId is None or active is None:
         print('error reading the json')
         sys.exit()
 
