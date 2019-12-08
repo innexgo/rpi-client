@@ -104,28 +104,19 @@ def beepDown():
 
 def sendEncounter(studentId):
     try:
-        newEncounterRequest = requests.get(f'{protocol}://{hostname}/api/encounter/new/',
+        attendsRequest = requests.get(f'{protocol}://{hostname}/api/misc/attends/',
                                            params={'apiKey': apiKey,
                                                    'locationId': locationId,
                                                    'studentId': studentId})
-        if newEncounterRequest.ok:
-            encounter = newEncounterRequest.json()
-            sessionRequest = requests.get(f'{protocol}://{hostname}/api/session/',
-                                          params={'apiKey': apiKey,
-                                                  'inEncounterId': encounter['id']})
-            if sessionRequest.ok:
-                # We find the number of sign ins caused by this encounter.
-                # If none, it was a sign out
-                wasSignOut = len(sessionRequest.json()) == 0
-                if wasSignOut:
-                    logging.info(f'Encounter: Successfully signed out student {studentId}')
-                    beepDown()
-                else:
-                    logging.info(f'Encounter: Successfully signed in student {studentId}')
-                    beepUp()
+        if attendsRequest.ok:
+            # If the session returned was complete, then it must be a signOut
+            wasSignOut = attendsRequest.json()['complete']
+            if wasSignOut:
+                logging.info(f'Encounter: Successfully signed out student {studentId}')
+                beepDown()
             else:
-                logging.error(f'Encounter: HTTP Error: {sessionRequest.content}')
-                beepError()
+                logging.info(f'Encounter: Successfully signed in student {studentId}')
+                beepUp()
         else:
             logging.error(f'Encounter: HTTP Error: {newEncounterRequest.content}')
             beepError()
