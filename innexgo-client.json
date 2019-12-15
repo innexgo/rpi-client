@@ -1,6 +1,5 @@
 {
-  "hostname":"innexgo.com",
-  "protocol":"https",
+  "hostname":"https://innexgo.com",
   "apiKey":"testlmao",
   "locationId":2,
   "active":false

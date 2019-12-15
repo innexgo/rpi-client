@@ -24,7 +24,6 @@ else:
 
 active = None
 apiKey = None
-protocol = None
 hostname = None
 locationId = None
 
@@ -66,16 +65,16 @@ def beepActive(duration):
 
 def beepUp():
     if active:
-        beepActive(2000, 0.3)
+        beepActive(0.3)
     else:
         beep(1000, 0.1)
         beep(2000, 0.1)
 
 def beepDown():
     if active:
-        beepActive(2000, 0.15)
+        beepActive(0.15)
         time.sleep(0.05)
-        beepActive(1000, 0.15)
+        beepActive(0.15)
     else:
         beep(2000, 0.1)
         beep(1000, 0.1)
@@ -84,37 +83,53 @@ def beepFlat():
     beep(2000, 0.2)
 
 def beepError():
-    for i in range(0, 3):
-        beep(1000, 0.1)
-        time.sleep(0.05)
+    if active:
+        for i in range(0, 3):
+            beepActive(0.1)
+            time.sleep(0.05)
+    else:
+        for i in range(0, 3):
+            beep(1000, 0.1)
+            time.sleep(0.05)
 
 def beepNetError():
-    for i in range(0, 6):
-        beep(1000, 0.01)
-        time.sleep(0.05)
+    if active:
+        for i in range(0, 6):
+            beepActive(0.01)
+            time.sleep(0.05)
+    else:
+        for i in range(0, 6):
+            beep(1000, 0.01)
+            time.sleep(0.05)
 
 def sendEncounter(studentId):
     try:
-        attendsRequest = requests.get(f'{protocol}://{hostname}/api/misc/attends/',
+        attendsRequest = requests.get(f'{hostname}/api/misc/attends/',
                                            params={'apiKey': apiKey,
                                                    'locationId': locationId,
+                                                   'manual': False,
                                                    'studentId': studentId})
         if attendsRequest.ok:
             # If the session returned was complete, then it must be a signOut
-            wasSignOut = attendsRequest.json()['complete']
-            if wasSignOut:
-                logging.info(f'Encounter: Successfully signed out student {studentId}')
-                beepDown()
+            responseJson = attendsRequest.json()
+            
+            if 'complete' in responseJson:
+                wasSignOut = attendsRequest.json()['complete']
+                if wasSignOut:
+                    logging.info(f'Encounter: Successfully signed out student {studentId}')
+                    beepDown()
+                else:
+                    logging.info(f'Encounter: Successfully signed in student {studentId}')
+                    beepUp()
             else:
-                logging.info(f'Encounter: Successfully signed in student {studentId}')
-                beepUp()
+                logging.error(f'No "complete" field found in response {attendsRequest.content}')
+                beepError()
         else:
-            logging.error(f'Encounter: HTTP Error: {newEncounterRequest.content}')
+            logging.error(f'Encounter: HTTP Error: {attendsRequest.content}')
             beepError()
     except requests.exceptions.RequestException:
-        logging.error(f'Encounter: Could not connect to {protocol}://{hostname}')
+        logging.error(f'Encounter: Could not connect to {hostname}')
         beepNetError()
-
 
 # Load the config file
 with open('/boot/innexgo-client.json') as configfile:
@@ -132,12 +147,11 @@ with open('/boot/innexgo-client.json') as configfile:
     config=json.load(configfile)
 
     hostname=config['hostname']
-    protocol=config['protocol']
     apiKey=config['apiKey']
     locationId=config['locationId']
     active=config['active']
 
-    if protocol is None or apiKey is None or hostname is None or locationId is None or active is None:
+    if apiKey is None or hostname is None or locationId is None or active is None:
         print('error reading the json')
         sys.exit()
 
