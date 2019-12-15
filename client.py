@@ -67,8 +67,7 @@ def beepUp():
     if active:
         beepActive(0.3)
     else:
-        beep(1000, 0.1)
-        beep(2000, 0.1)
+        beep(1000, 0.3)
 
 def beepDown():
     if active:
@@ -76,11 +75,9 @@ def beepDown():
         time.sleep(0.05)
         beepActive(0.15)
     else:
-        beep(2000, 0.1)
-        beep(1000, 0.1)
-
-def beepFlat():
-    beep(2000, 0.2)
+        beep(1000, 0.15)
+        time.sleep(0.05)
+        beep(1000, 0.15)
 
 def beepError():
     if active:
