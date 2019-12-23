@@ -31,6 +31,7 @@ locationId = None
 sector = 10
 soundInitialized = False
 soundPin = 40
+toneHz = 500
 
 def currentMillis():
     return round(1000 * time.time())
@@ -53,9 +54,10 @@ def setInterval(func, sec):
 
 def beep(hertz, duration):
     soundChannel = GPIO.PWM(soundPin, hertz)
-    soundChannel.start(50.0)
+    soundChannel.start(10.0)
     time.sleep(duration)
     soundChannel.stop()
+    GPIO.setup(soundPin, GPIO.OUT)
     GPIO.output(soundPin, GPIO.HIGH)
 
 def beepActive(duration):
@@ -67,7 +69,7 @@ def beepUp():
     if active:
         beepActive(0.3)
     else:
-        beep(1000, 0.3)
+        beep(toneHz, 0.3)
 
 def beepDown():
     if active:
@@ -75,9 +77,9 @@ def beepDown():
         time.sleep(0.05)
         beepActive(0.15)
     else:
-        beep(1000, 0.15)
+        beep(toneHz, 0.15)
         time.sleep(0.05)
-        beep(1000, 0.15)
+        beep(toneHz, 0.15)
 
 def beepError():
     if active:
@@ -86,7 +88,7 @@ def beepError():
             time.sleep(0.05)
     else:
         for i in range(0, 3):
-            beep(1000, 0.1)
+            beep(100, 0.1)
             time.sleep(0.05)
 
 def beepNetError():
@@ -96,7 +98,7 @@ def beepNetError():
             time.sleep(0.05)
     else:
         for i in range(0, 6):
-            beep(1000, 0.01)
+            beep(100, 0.01)
             time.sleep(0.05)
 
 def sendEncounter(studentId):
@@ -182,6 +184,6 @@ with open('/boot/innexgo-client.json') as configfile:
                         logging.error(f'RFID: Error reading tag info')
                         beepError()
                 else:
-                    time.sleep(0.05)
+                    time.sleep(0.01)
         except KeyboardInterrupt:
             GPIO.cleanup()
